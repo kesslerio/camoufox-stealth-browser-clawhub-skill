@@ -69,29 +69,23 @@ def chmod_file(path: Path) -> None:
 def domain_matches(cookie_domain: str, host: str) -> bool:
     """Check if cookie domain matches host.
     
-    Cookie domain rules:
-    - Leading dot (.example.com) = domain cookie, matches host and all subdomains
-    - No leading dot (example.com) = host-only cookie, matches exact host only
+    Per RFC 6265, the leading dot is ignored for matching purposes.
+    We match if host equals the domain or is a subdomain of it.
+    This is intentionally permissive to handle various cookie export formats.
     """
     if not cookie_domain or not host:
         return False
     
     # Normalize to lowercase for case-insensitive comparison
-    cookie_domain = cookie_domain.lower()
+    cookie_domain = cookie_domain.lower().lstrip(".")
     host = host.lower()
     
-    # Check if it's a domain cookie (has leading dot)
-    is_domain_cookie = cookie_domain.startswith(".")
-    
-    # Strip leading dot for comparison
-    cookie_domain_stripped = cookie_domain.lstrip(".")
-    
-    # Exact match always works
-    if host == cookie_domain_stripped:
+    # Exact match
+    if host == cookie_domain:
         return True
     
-    # Subdomain matching only for domain cookies (with leading dot)
-    if is_domain_cookie and host.endswith("." + cookie_domain_stripped):
+    # Subdomain match (host ends with .domain)
+    if host.endswith("." + cookie_domain):
         return True
     
     return False
