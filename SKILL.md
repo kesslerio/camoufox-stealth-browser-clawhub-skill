@@ -39,20 +39,17 @@ All scripts run in `pybox` distrobox for isolation.
 # Install tools in pybox
 distrobox-enter pybox -- pip install nodriver camoufox patchright curl_cffi
 
-# Install Camoufox browser
-distrobox-enter pybox -- python -c "import camoufox; camoufox.install()"
+# Install Camoufox browser (downloads ~700MB Firefox fork)
+distrobox-enter pybox -- camoufox fetch
 ```
+
+**Note:** Nodriver has a bug with Python 3.14 (encoding issue). Use Camoufox or curl_cffi for now.
 
 ### 2. Fetch a Protected Page
 
-**Nodriver (fast, general use):**
+**Camoufox (recommended):**
 ```bash
-distrobox-enter pybox -- python scripts/nodriver-fetch.py "https://example.com"
-```
-
-**Camoufox (heavy-duty):**
-```bash
-distrobox-enter pybox -- python scripts/camoufox-fetch.py "https://example.com"
+distrobox-enter pybox -- python scripts/camoufox-fetch.py "https://example.com" --headless
 ```
 
 **API scraping (no browser):**
@@ -154,9 +151,9 @@ python scripts/camoufox-fetch.py "https://example.com"
 ### Scrape Airbnb Listing
 
 ```bash
-distrobox-enter pybox -- python scripts/nodriver-fetch.py \
+distrobox-enter pybox -- python scripts/camoufox-fetch.py \
   "https://www.airbnb.com/rooms/12345" \
-  --wait 10 \
+  --headless --wait 10 \
   --screenshot airbnb.png
 ```
 
@@ -165,7 +162,7 @@ distrobox-enter pybox -- python scripts/nodriver-fetch.py \
 ```bash
 distrobox-enter pybox -- python scripts/camoufox-fetch.py \
   "https://www.yelp.com/biz/some-restaurant" \
-  --wait 8 \
+  --headless --wait 8 \
   --output yelp.html
 ```
 
