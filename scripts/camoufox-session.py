@@ -67,12 +67,34 @@ def chmod_file(path: Path) -> None:
 
 
 def domain_matches(cookie_domain: str, host: str) -> bool:
+    """Check if cookie domain matches host.
+    
+    Cookie domain rules:
+    - Leading dot (.example.com) = domain cookie, matches host and all subdomains
+    - No leading dot (example.com) = host-only cookie, matches exact host only
+    """
     if not cookie_domain or not host:
         return False
-    cookie_domain = cookie_domain.lstrip(".")
-    if host == cookie_domain:
+    
+    # Normalize to lowercase for case-insensitive comparison
+    cookie_domain = cookie_domain.lower()
+    host = host.lower()
+    
+    # Check if it's a domain cookie (has leading dot)
+    is_domain_cookie = cookie_domain.startswith(".")
+    
+    # Strip leading dot for comparison
+    cookie_domain_stripped = cookie_domain.lstrip(".")
+    
+    # Exact match always works
+    if host == cookie_domain_stripped:
         return True
-    return host.endswith("." + cookie_domain)
+    
+    # Subdomain matching only for domain cookies (with leading dot)
+    if is_domain_cookie and host.endswith("." + cookie_domain_stripped):
+        return True
+    
+    return False
 
 
 def filter_cookies_for_host(cookies: Iterable[dict], host: str) -> List[dict]:
@@ -181,8 +203,12 @@ async def run_session(
                 return 2
             matched = filter_cookies_for_host(all_cookies, host)
             if matched:
-                await context.add_cookies(matched)
-                print(f"🍪 Imported {len(matched)} cookies for {host}")
+                try:
+                    await context.add_cookies(matched)
+                    print(f"🍪 Imported {len(matched)} cookies for {host}")
+                except Exception as exc:
+                    print(f"Error: Failed to import cookies (invalid format?): {exc}")
+                    return 2
             else:
                 print(f"🍪 No cookies matched {host}")
 
