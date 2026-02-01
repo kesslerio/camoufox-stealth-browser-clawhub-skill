@@ -42,16 +42,6 @@ http://username:password@gate.provider.com:port
 
 ## Configuration Examples
 
-### Nodriver
-
-```python
-import nodriver as n
-
-browser = await n.start(
-    browser_args=["--proxy-server=http://user:pass@proxy.example.com:8080"]
-)
-```
-
 ### Camoufox
 
 ```python

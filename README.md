@@ -10,8 +10,7 @@ Standard Playwright/Selenium gets blocked by modern anti-bot systems. This skill
 
 | Tool | Best For |
 |------|----------|
-| **Nodriver** | Fast general scraping, light Cloudflare |
-| **Camoufox** | Maximum stealth - Yelp, Datadome, aggressive Turnstile |
+| **Camoufox** | All protected sites - Cloudflare, Datadome, Yelp, Airbnb |
 | **curl_cffi** | API scraping with TLS fingerprint spoofing |
 
 ## Quick Start
@@ -37,18 +36,11 @@ distrobox-enter pybox -- python scripts/camoufox-fetch.py "https://yelp.com/biz/
 
 ## Tools
 
-### Nodriver
-Driverless Chrome automation. Successor to undetected-chromedriver.
-```bash
-distrobox-enter pybox -- python scripts/nodriver-fetch.py "https://example.com" \
-  --wait 5 --screenshot page.png
-```
-
 ### Camoufox
 Custom Firefox build with C++ level stealth patches. Maximum evasion.
 ```bash
 distrobox-enter pybox -- python scripts/camoufox-fetch.py "https://example.com" \
-  --wait 8 --output page.html
+  --headless --wait 8 --output page.html
 ```
 
 ### curl_cffi

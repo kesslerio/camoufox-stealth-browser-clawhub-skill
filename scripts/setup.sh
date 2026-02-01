@@ -21,7 +21,7 @@ fi
 
 echo "📦 Installing Python packages..."
 distrobox-enter pybox -- pip install --upgrade pip
-distrobox-enter pybox -- pip install nodriver camoufox patchright curl_cffi
+distrobox-enter pybox -- pip install camoufox curl_cffi
 
 echo "🦊 Installing Camoufox browser..."
 distrobox-enter pybox -- python -c "import camoufox; camoufox.install()"

@@ -24,9 +24,7 @@ Anti-bot browser automation that bypasses Cloudflare Turnstile, Datadome, and ag
 
 | Target Difficulty | Tool | When to Use |
 |------------------|------|-------------|
-| **Easy** | Nodriver | General Cloudflare, fast scraping |
-| **Medium** | Patchright | Need Playwright API compatibility |
-| **Hard** | Camoufox | Yelp, Datadome, aggressive Turnstile |
+| **Browser** | Camoufox | All protected sites - Cloudflare, Datadome, Yelp, Airbnb |
 | **API Only** | curl_cffi | No browser needed, just TLS spoofing |
 
 ## Quick Start
@@ -37,22 +35,20 @@ All scripts run in `pybox` distrobox for isolation.
 
 ```bash
 # Install tools in pybox
-distrobox-enter pybox -- pip install nodriver camoufox patchright curl_cffi
+distrobox-enter pybox -- pip install camoufox curl_cffi
 
 # Install Camoufox browser (downloads ~700MB Firefox fork)
 distrobox-enter pybox -- camoufox fetch
 ```
 
-**Note:** Nodriver has a bug with Python 3.14 (encoding issue). Use Camoufox or curl_cffi for now.
-
 ### 2. Fetch a Protected Page
 
-**Camoufox (recommended):**
+**Browser (Camoufox):**
 ```bash
 distrobox-enter pybox -- python scripts/camoufox-fetch.py "https://example.com" --headless
 ```
 
-**API scraping (no browser):**
+**API only (curl_cffi):**
 ```bash
 distrobox-enter pybox -- python scripts/curl-api.py "https://api.example.com/endpoint"
 ```
@@ -66,32 +62,20 @@ distrobox-enter pybox -- python scripts/curl-api.py "https://api.example.com/end
 │  distrobox-enter pybox -- python scripts/xxx.py         │
 ├─────────────────────────────────────────────────────────┤
 │                      pybox Container                     │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │  Nodriver   │  │  Camoufox   │  │  curl_cffi  │     │
-│  │  (Chrome)   │  │  (Firefox)  │  │  (TLS spoof)│     │
-│  └─────────────┘  └─────────────┘  └─────────────┘     │
+│         ┌─────────────┐  ┌─────────────┐               │
+│         │  Camoufox   │  │  curl_cffi  │               │
+│         │  (Firefox)  │  │  (TLS spoof)│               │
+│         └─────────────┘  └─────────────┘               │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ## Tool Details
 
-### Nodriver
-- **What:** Driverless Chrome automation (successor to undetected-chromedriver)
-- **Pros:** Fast, no WebDriver protocol overhead, good Cloudflare bypass
-- **Cons:** Less effective against Datadome/heavy fingerprinting
-- **Best for:** Speed, general scraping, light Cloudflare
-
 ### Camoufox  
 - **What:** Custom Firefox build with C++ level stealth patches
 - **Pros:** Best fingerprint evasion, passes Turnstile automatically
-- **Cons:** Heavier, Firefox-based (some sites prefer Chrome)
-- **Best for:** Yelp, Datadome, aggressive anti-bot
-
-### Patchright
-- **What:** Playwright fork with stealth patches
-- **Pros:** Drop-in Playwright replacement, familiar API
-- **Cons:** Not as stealthy as Camoufox
-- **Best for:** Existing Playwright code that needs stealth upgrade
+- **Cons:** ~700MB download, Firefox-based
+- **Best for:** All protected sites - Cloudflare, Datadome, Yelp, Airbnb
 
 ### curl_cffi
 - **What:** Python HTTP client with browser TLS fingerprint spoofing
@@ -117,7 +101,7 @@ See **[references/proxy-setup.md](references/proxy-setup.md)** for proxy configu
 Sites like Airbnb/Yelp use behavioral analysis. To avoid detection:
 
 1. **Warm up:** Don't hit target URL directly. Visit homepage first, scroll, click around.
-2. **Mouse movements:** Inject random mouse movements (Camoufox/Nodriver handle this).
+2. **Mouse movements:** Inject random mouse movements (Camoufox handles this).
 3. **Timing:** Add random delays (2-5s between actions), not fixed intervals.
 4. **Session stickiness:** Use same proxy IP for 10-30 min sessions, don't rotate every request.
 
