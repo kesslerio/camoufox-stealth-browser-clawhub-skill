@@ -41,26 +41,14 @@ distrobox-enter pybox -- pip install camoufox curl_cffi
 distrobox-enter pybox -- camoufox fetch
 ```
 
-### 2. Fetch a Protected Page (No Login)
+### 2. Fetch a Protected Page
 
+**Browser (Camoufox):**
 ```bash
 distrobox-enter pybox -- python scripts/camoufox-fetch.py "https://example.com" --headless
 ```
 
-### 3. Login & Persistent Sessions
-
-```bash
-# First time: Login manually (opens browser window)
-distrobox-enter pybox -- python scripts/camoufox-session.py "https://airbnb.com" --profile airbnb --login
-
-# After login: Use saved session (headless)
-distrobox-enter pybox -- python scripts/camoufox-session.py "https://airbnb.com/trips" --profile airbnb --headless
-```
-
-Sessions stored in `~/.stealth-browser/profiles/<name>/` with cookies + localStorage.
-
-### 4. API Only (No Browser)
-
+**API only (curl_cffi):**
 ```bash
 distrobox-enter pybox -- python scripts/curl-api.py "https://api.example.com/endpoint"
 ```
@@ -144,7 +132,7 @@ python scripts/camoufox-fetch.py "https://example.com"
 
 ## Examples
 
-### Scrape Airbnb Listing (No Login)
+### Scrape Airbnb Listing
 
 ```bash
 distrobox-enter pybox -- python scripts/camoufox-fetch.py \
@@ -153,41 +141,13 @@ distrobox-enter pybox -- python scripts/camoufox-fetch.py \
   --screenshot airbnb.png
 ```
 
-### Airbnb with Login (View Trips, Bookings)
+### Scrape Yelp Business
 
 ```bash
-# First time: Login manually
-distrobox-enter pybox -- python scripts/camoufox-session.py \
-  "https://www.airbnb.com" --profile airbnb --login
-
-# Then use session for protected pages
-distrobox-enter pybox -- python scripts/camoufox-session.py \
-  "https://www.airbnb.com/trips/v1" --profile airbnb --headless \
-  --output trips.html
-```
-
-### Yelp with Login
-
-```bash
-# Login once
-distrobox-enter pybox -- python scripts/camoufox-session.py \
-  "https://www.yelp.com/login" --profile yelp --login
-
-# Access account pages
-distrobox-enter pybox -- python scripts/camoufox-session.py \
-  "https://www.yelp.com/user_details" --profile yelp --headless
-```
-
-### Export/Import Cookies
-
-```bash
-# Export cookies to share or backup
-distrobox-enter pybox -- python scripts/camoufox-session.py \
-  --profile airbnb --export-cookies airbnb-cookies.json
-
-# Import cookies on another machine
-distrobox-enter pybox -- python scripts/camoufox-session.py \
-  "https://airbnb.com" --profile airbnb --import-cookies airbnb-cookies.json
+distrobox-enter pybox -- python scripts/camoufox-fetch.py \
+  "https://www.yelp.com/biz/some-restaurant" \
+  --headless --wait 8 \
+  --output yelp.html
 ```
 
 ### API Scraping with TLS Spoofing
