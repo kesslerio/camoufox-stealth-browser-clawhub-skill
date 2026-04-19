@@ -49,6 +49,15 @@ The browser scripts self-detect runtime. Use them directly:
 
 Do not frame browser execution as "importing Camoufox into system Python" or "switching to the proper runtime." Run the wrapper scripts directly and let them choose the runtime.
 
+## Runtime Failure Reporting
+
+When browser execution fails, report the observed runtime failure first.
+
+- If `camoufox-nixos` times out or exits before navigation, say it failed before page navigation and treat it as a host runtime launch issue until proven otherwise.
+- Do not turn a wrapper startup failure into a target-site blocking diagnosis.
+- Do not claim a "legacy Python path worked" unless you actually ran that exact path and verified success.
+- If you suggest the distrobox fallback, present it as an alternate documented browser lane, not proof that system Python imports are the real problem.
+
 ### Optional fallback/API setup
 
 If `camoufox-nixos` is missing, or if you need the `curl_cffi` lane, run:
@@ -163,6 +172,7 @@ Interactive login still needs a visible browser window regardless of runtime. If
 | Problem | Meaning | What to do |
 |---------|---------|------------|
 | `No supported browser runtime found` | Neither `camoufox-nixos` nor valid distrobox fallback was detected | Install the host wrapper or configure distrobox plus pybox |
+| `camoufox-nixos` times out before navigation | Browser wrapper failed to launch cleanly on the host | Report it as a host runtime launch issue first; only discuss site blocking after the browser actually reaches the target |
 | `--import-cookies requires the legacy distrobox fallback` | Host-native lane cannot honestly reproduce that legacy import flow | Use the fallback lane for that operation |
 | Browser lane works but `curl-api.py` does not | `curl_cffi` lane is still legacy-path setup in this repo | Run `bash scripts/setup.sh` |
 | Immediate block or challenge loop | Proxy quality or behavior issue | Use residential/mobile proxy and increase wait time |

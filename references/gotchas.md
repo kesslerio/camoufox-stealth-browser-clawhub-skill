@@ -8,6 +8,9 @@ These are the recurring footguns for this repo. They matter more than generic ad
 - Do not narrate browser execution as "switching to the proper runtime."
 - Run `./scripts/camoufox-fetch.py` or `./scripts/camoufox-session.py` directly.
 - Those wrapper scripts detect `camoufox-nixos` first and fall back automatically when the legacy distrobox lane is valid.
+- If the wrapper fails before page navigation, describe that as an observed host runtime launch failure.
+- Do not infer that a legacy Python path worked unless you actually executed that exact path and verified success.
+- Do not jump from wrapper startup failure to "site blocking" until the browser really reached the target page.
 
 ## Browser Lane Vs API Helper
 
