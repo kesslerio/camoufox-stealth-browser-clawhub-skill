@@ -1,310 +1,167 @@
 ---
 name: camoufox-stealth-browser
 homepage: https://github.com/kesslerio/camoufox-stealth-browser-clawhub-skill
-description: C++ level anti-bot browser automation using Camoufox (patched Firefox) in isolated containers. Bypasses Cloudflare Turnstile, Datadome, Airbnb, Yelp. Superior to Chrome-based solutions (undetected-chromedriver, puppeteer-stealth) which only patch at JS level. Use when: 'stealth browser', 'bypass bot detection', 'scrape protected site', standard Playwright/Selenium gets blocked. NOT for normal browser automation (use browser tool directly).
+description: C++ level anti-bot browser automation using Camoufox (patched Firefox). Browser workflows prefer camoufox-nixos on NixOS hosts and fall back to distrobox plus pybox on compatible Linux setups. Use when standard Playwright or Selenium gets blocked by Cloudflare, Datadome, Airbnb, Yelp, or similar anti-bot systems. NOT for normal browser automation.
 metadata:
   openclaw:
     emoji: "🦊"
     requires:
-      bins: ["distrobox"]
+      bins: []
       env: []
 ---
 
 # Camoufox Stealth Browser 🦊
 
-**C++ level** anti-bot evasion using Camoufox — a custom Firefox fork with stealth patches compiled into the browser itself, not bolted on via JavaScript.
+Camoufox is the stealth lane for hostile sites. It patches Firefox at the browser level instead of bolting JavaScript tricks on top after launch.
 
-## Why Camoufox > Chrome-based Solutions
+## Why Camoufox
 
-| Approach | Detection Level | Tools |
-|----------|-----------------|-------|
-| **Camoufox (this skill)** | C++ compiled patches | Undetectable fingerprints baked into browser |
-| undetected-chromedriver | JS runtime patches | Can be detected by timing analysis |
-| puppeteer-stealth | JS injection | Patches applied after page load = detectable |
-| playwright-stealth | JS injection | Same limitations |
+| Approach | Patch level | Typical weakness |
+|----------|-------------|------------------|
+| **Camoufox** | Browser/runtime | Harder to fingerprint with timing and JS consistency checks |
+| undetected-chromedriver | JS/runtime glue | Timing and environment mismatches |
+| puppeteer-stealth | JS injection | Patches land after page startup |
+| playwright-stealth | JS injection | Same class of weakness |
 
-**Camoufox patches Firefox at the source code level** — WebGL, Canvas, AudioContext fingerprints are genuinely spoofed, not masked by JavaScript overrides that anti-bot systems can detect.
+## Runtime Selection
 
-## Key Advantages
+The skill now uses this order for **browser** workflows:
 
-1. **C++ Level Stealth** — Fingerprint spoofing compiled into the browser, not JS hacks
-2. **Container Isolation** — Runs in distrobox, keeping your host system clean
-3. **Dual-Tool Approach** — Camoufox for browsers, curl_cffi for API-only (no browser overhead)
-4. **Firefox-Based** — Less fingerprinted than Chrome (everyone uses Chrome for bots)
+1. `camoufox-nixos`
+2. `distrobox` with `pybox`
+3. clear setup failure if neither exists
 
-## When to Use
-
-- Standard Playwright/Selenium gets blocked
-- Site shows Cloudflare challenge or "checking your browser"
-- Need to scrape Airbnb, Yelp, or similar protected sites
-- `puppeteer-stealth` or `undetected-chromedriver` stopped working
-- You need **actual** stealth, not JS band-aids
-
-## Tool Selection
-
-| Tool | Level | Best For |
-|------|-------|----------|
-| **Camoufox** | C++ patches | All protected sites - Cloudflare, Datadome, Yelp, Airbnb |
-| **curl_cffi** | TLS spoofing | API endpoints only - no JS needed, very fast |
+`curl_cffi` is unchanged. It remains the API-only lane and still relies on the legacy distrobox setup in this repo.
 
 ## Quick Start
 
-All scripts run in `pybox` distrobox for isolation.
+### Browser workflows
 
-⚠️ **Use `python3.14` explicitly** - pybox may have multiple Python versions with different packages installed.
-
-### 1. Setup (First Time)
+The browser scripts self-detect runtime. Use them directly:
 
 ```bash
-# Install tools in pybox (use python3.14)
-distrobox-enter pybox -- python3.14 -m pip install camoufox curl_cffi
+python scripts/camoufox-fetch.py "https://example.com" --headless
 
-# Camoufox browser downloads automatically on first run (~700MB Firefox fork)
+python scripts/camoufox-session.py \
+  --profile economist \
+  --status "https://www.economist.com"
 ```
 
-### 2. Fetch a Protected Page
+### Legacy/API setup
 
-**Browser (Camoufox):**
-```bash
-distrobox-enter pybox -- python3.14 scripts/camoufox-fetch.py "https://example.com" --headless
-```
-
-**API only (curl_cffi):**
-```bash
-distrobox-enter pybox -- python3.14 scripts/curl-api.py "https://api.example.com/endpoint"
-```
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     OpenClaw Agent                       │
-├─────────────────────────────────────────────────────────┤
-│  distrobox-enter pybox -- python3.14 scripts/xxx.py         │
-├─────────────────────────────────────────────────────────┤
-│                      pybox Container                     │
-│         ┌─────────────┐  ┌─────────────┐               │
-│         │  Camoufox   │  │  curl_cffi  │               │
-│         │  (Firefox)  │  │  (TLS spoof)│               │
-│         └─────────────┘  └─────────────┘               │
-└─────────────────────────────────────────────────────────┘
-```
-
-## Tool Details
-
-### Camoufox  
-- **What:** Custom Firefox build with C++ level stealth patches
-- **Pros:** Best fingerprint evasion, passes Turnstile automatically
-- **Cons:** ~700MB download, Firefox-based
-- **Best for:** All protected sites - Cloudflare, Datadome, Yelp, Airbnb
-
-### curl_cffi
-- **What:** Python HTTP client with browser TLS fingerprint spoofing
-- **Pros:** No browser overhead, very fast
-- **Cons:** No JS execution, API endpoints only
-- **Best for:** Known API endpoints, mobile app reverse engineering
-
-## Critical: Proxy Requirements
-
-**Datacenter IPs (AWS, DigitalOcean) = INSTANT BLOCK on Airbnb/Yelp**
-
-You MUST use residential or mobile proxies:
-
-```python
-# Example proxy config
-proxy = "http://user:pass@residential-proxy.example.com:8080"
-```
-
-See **[references/proxy-setup.md](references/proxy-setup.md)** for proxy configuration.
-
-## Behavioral Tips
-
-Sites like Airbnb/Yelp use behavioral analysis. To avoid detection:
-
-1. **Warm up:** Don't hit target URL directly. Visit homepage first, scroll, click around.
-2. **Mouse movements:** Inject random mouse movements (Camoufox handles this).
-3. **Timing:** Add random delays (2-5s between actions), not fixed intervals.
-4. **Session stickiness:** Use same proxy IP for 10-30 min sessions, don't rotate every request.
-
-## Headless Mode Warning
-
-⚠️ Old `--headless` flag is DETECTED. Options:
-
-1. **New Headless:** Use `headless="new"` (Chrome 109+)
-2. **Xvfb:** Run headed browser in virtual display
-3. **Headed:** Just run headed if you can (most reliable)
+If `camoufox-nixos` is missing, or if you need the `curl_cffi` lane, run:
 
 ```bash
-# Xvfb approach (Linux)
-Xvfb :99 -screen 0 1920x1080x24 &
-export DISPLAY=:99
-python scripts/camoufox-fetch.py "https://example.com"
+bash scripts/setup.sh
 ```
 
-## Troubleshooting
+That script configures the distrobox fallback when `pybox` is available and tells you what is missing when it is not.
 
-| Problem | Solution |
-|---------|----------|
-| "Access Denied" immediately | Use residential proxy |
-| Cloudflare challenge loops | Try Camoufox instead of Nodriver |
-| Browser crashes in pybox | Install missing deps: `sudo dnf install gtk3 libXt` |
-| TLS fingerprint blocked | Use curl_cffi with `impersonate="chrome120"` |
-| Turnstile checkbox appears | Add mouse movement, increase wait time |
-| `ModuleNotFoundError: camoufox` | Use `python3.14` not `python` or `python3` |
-| `greenlet` segfault (exit 139) | Python version mismatch - use `python3.14` explicitly |
-| `libstdc++.so.6` errors | NixOS lib path issue - use `python3.14` in pybox |
+## When To Use
 
-### Python Version Issues (NixOS/pybox)
+- Standard Playwright or Selenium gets blocked
+- The site shows Cloudflare challenge loops
+- You need persistent authenticated browsing for hostile or paywalled sites
+- You need actual stealth rather than generic browser automation
 
-The `pybox` container may have multiple Python versions with separate site-packages:
+Do **not** use this skill for ordinary browsing or generic site testing. Use your normal browser automation tool for that.
+
+## Workflow Summary
+
+### Protected-page fetch
 
 ```bash
-# Check which Python has camoufox
-distrobox-enter pybox -- python3.14 -c "import camoufox; print('OK')"
-
-# Wrong (may use different Python)
-distrobox-enter pybox -- python3.14 scripts/camoufox-session.py ...
-
-# Correct (explicit version)
-distrobox-enter pybox -- python3.14 scripts/camoufox-session.py ...
-```
-
-If you get segfaults or import errors, always use `python3.14` explicitly.
-
-## Examples
-
-### Scrape Airbnb Listing
-
-```bash
-distrobox-enter pybox -- python3.14 scripts/camoufox-fetch.py \
-  "https://www.airbnb.com/rooms/12345" \
-  --headless --wait 10 \
-  --screenshot airbnb.png
-```
-
-### Scrape Yelp Business
-
-```bash
-distrobox-enter pybox -- python3.14 scripts/camoufox-fetch.py \
-  "https://www.yelp.com/biz/some-restaurant" \
-  --headless --wait 8 \
+python scripts/camoufox-fetch.py \
+  "https://www.yelp.com/biz/example" \
+  --headless \
+  --wait 8 \
+  --screenshot yelp.png \
   --output yelp.html
 ```
 
-### API Scraping with TLS Spoofing
+### Persistent session
 
 ```bash
-distrobox-enter pybox -- python3.14 scripts/curl-api.py \
-  "https://api.yelp.com/v3/businesses/search?term=coffee&location=SF" \
-  --headers '{"Authorization": "Bearer xxx"}'
+# Interactive login
+python scripts/camoufox-session.py \
+  --profile airbnb \
+  --login "https://www.airbnb.com/account-settings"
+
+# Reuse saved session
+python scripts/camoufox-session.py \
+  --profile airbnb \
+  --headless "https://www.airbnb.com/trips"
+
+# Check session status
+python scripts/camoufox-session.py \
+  --profile airbnb \
+  --status "https://www.airbnb.com"
 ```
 
-## Session Management
+## State Model
 
-Persistent sessions allow reusing authenticated state across runs without re-logging in.
+Browser profile state now depends on the selected runtime:
 
-### Quick Start
+- **Host-native (`camoufox-nixos`)**: `~/.cache/camoufox-nixos`
+- **Legacy distrobox fallback**: `~/.stealth-browser/profiles/<name>/`
+
+Implications:
+
+- Persistent session reuse still works in both lanes.
+- `--import-cookies` is a legacy fallback feature. If you ask for it without the distrobox lane, the script fails clearly instead of pretending parity.
+- `--export-cookies` continues to work.
+
+## `curl_cffi` Lane
+
+`curl_cffi` remains the API-only path. It is useful when:
+
+- there is no browser interaction requirement
+- you already know the API endpoint
+- browser overhead would be wasted
+
+Current repo guidance for it is still the legacy distrobox path:
 
 ```bash
-# 1. Login interactively (headed browser opens)
-distrobox-enter pybox -- python3.14 scripts/camoufox-session.py \
-  --profile airbnb --login "https://www.airbnb.com/account-settings"
-
-# Complete login in browser, then press Enter to save session
-
-# 2. Reuse session in headless mode
-distrobox-enter pybox -- python3.14 scripts/camoufox-session.py \
-  --profile airbnb --headless "https://www.airbnb.com/trips"
-
-# 3. Check session status
-distrobox-enter pybox -- python3.14 scripts/camoufox-session.py \
-  --profile airbnb --status "https://www.airbnb.com"
+distrobox enter pybox -- python3.14 scripts/curl-api.py "https://api.example.com"
 ```
 
-### Flags
+## Non-NixOS And Missing Runtime
 
-| Flag | Description |
-|------|-------------|
-| `--profile NAME` | Named profile for session storage (required) |
-| `--login` | Interactive login mode - opens headed browser |
-| `--headless` | Use saved session in headless mode |
-| `--status` | Check if session appears valid |
-| `--export-cookies FILE` | Export cookies to JSON for backup |
-| `--import-cookies FILE` | Import cookies from JSON file |
+- **NixOS hosts with `camoufox-nixos`**: browser lane is host-native by default
+- **Other Linux hosts**: use the distrobox fallback
+- **macOS / Windows**: `camoufox-nixos` is not the portability story; the repo’s portable browser guidance is still the distrobox fallback where available
 
-### Storage
+This skill does **not** try to teach every machine how to recreate `camoufox-nixos`. That wrapper is host-specific.
 
-- **Location:** `~/.stealth-browser/profiles/<name>/`
-- **Permissions:** Directory `700`, files `600`
-- **Profile names:** Letters, numbers, `_`, `-` only (1-63 chars)
+## Proxy Reminder
 
-### Cookie Handling
+For Airbnb, Yelp, Datadome, and similar targets:
 
-- **Save:** All cookies from all domains stored in browser profile
-- **Restore:** Only cookies matching target URL domain are used
-- **SSO:** If redirected to Google/auth domain, re-authenticate once and profile updates
+- datacenter IPs often get blocked immediately
+- residential or mobile proxies are usually required
+- sticky sessions matter more than rotating every request
 
-### Login Wall Detection
+See [references/proxy-setup.md](references/proxy-setup.md).
 
-The script detects session expiry using multiple signals:
+## Remote / Headed Login Notes
 
-1. **HTTP status:** 401, 403
-2. **URL patterns:** `/login`, `/signin`, `/auth`
-3. **Title patterns:** "login", "sign in", etc.
-4. **Content keywords:** "captcha", "verify", "authenticate"
-5. **Form detection:** Password input fields
+Interactive login still needs a visible browser window regardless of runtime. If you are remote, use a display-capable setup such as:
 
-If detected during `--headless` mode, you'll see:
-```
-🔒 Login wall signals: url-path, password-form
-```
+- local desktop session
+- SSH with display forwarding where supported
+- VNC or similar remote desktop
 
-Re-run with `--login` to refresh the session.
+## Troubleshooting
 
-### Remote Login (SSH)
-
-Since `--login` requires a visible browser, you need display forwarding:
-
-**X11 Forwarding (Preferred):**
-```bash
-# Connect with X11 forwarding
-ssh -X user@server
-
-# Run login (opens browser on your local machine)
-distrobox-enter pybox -- python3.14 scripts/camoufox-session.py \
-  --profile mysite --login "https://example.com"
-```
-
-**VNC Alternative:**
-```bash
-# On server: start VNC session
-vncserver :1
-
-# On client: connect to VNC
-vncviewer server:1
-
-# In VNC session: run login
-distrobox-enter pybox -- python3.14 scripts/camoufox-session.py \
-  --profile mysite --login "https://example.com"
-```
-
-### Security Notes
-
-⚠️ **Cookies are credentials.** Treat profile directories like passwords:
-- Profile dirs have `chmod 700` (owner only)
-- Cookie exports have `chmod 600`
-- Don't share profiles or exported cookies over insecure channels
-- Consider encrypting backups
-
-### Limitations
-
-| Limitation | Reason |
-|------------|--------|
-| localStorage/sessionStorage not exported | Use browser profile instead (handles automatically) |
-| IndexedDB not portable | Stored in browser profile, not cookie export |
-| No parallel profile access | No file locking in v1; use one process per profile |
+| Problem | Meaning | What to do |
+|---------|---------|------------|
+| `No supported browser runtime found` | Neither `camoufox-nixos` nor valid distrobox fallback was detected | Install the host wrapper or configure distrobox plus pybox |
+| `--import-cookies requires the legacy distrobox fallback` | Host-native lane cannot honestly reproduce that legacy import flow | Use the fallback lane for that operation |
+| Browser lane works but `curl-api.py` does not | `curl_cffi` lane is still legacy-path setup in this repo | Run `bash scripts/setup.sh` |
+| Immediate block or challenge loop | Proxy quality or behavior issue | Use residential/mobile proxy and increase wait time |
 
 ## References
 
-- [references/proxy-setup.md](references/proxy-setup.md) — Proxy configuration guide
-- [references/fingerprint-checks.md](references/fingerprint-checks.md) — What anti-bot systems check
+- [README.md](README.md) — repo overview
+- [references/proxy-setup.md](references/proxy-setup.md) — proxy guidance
+- [references/fingerprint-checks.md](references/fingerprint-checks.md) — anti-bot fingerprint categories
