@@ -35,4 +35,16 @@ python3 "$ROOT/scripts/camoufox-fetch.py" "https://example.com" --wait 0 >"$TMPD
 grep -q "FAKE DISTROBOX EXEC fetch fallback" "$TMPDIR/fallback.stdout"
 grep -q -- "--runtime legacy" "$TMPDIR/distrobox.log"
 
+python3 "$ROOT/scripts/camoufox-fetch.py" \
+  "https://example.com" \
+  --wait 0 \
+  --runtime auto >"$TMPDIR/fallback-explicit-runtime.stdout"
+
+grep -q "FAKE DISTROBOX EXEC fetch fallback" "$TMPDIR/fallback-explicit-runtime.stdout"
+grep -q -- "--runtime legacy https://example.com --wait 0" "$TMPDIR/distrobox.log"
+if grep -q -- "--runtime auto" "$TMPDIR/distrobox.log"; then
+  echo "unexpected runtime auto flag leaked into distrobox fallback" >&2
+  exit 1
+fi
+
 echo "camoufox-fetch adapter checks passed"

@@ -1,0 +1,4 @@
+.ai/
+.worktrees/
+__pycache__/
+*.pyc

@@ -52,4 +52,17 @@ python3 "$ROOT/scripts/camoufox-session.py" \
 grep -q "FAKE DISTROBOX EXEC session fallback" "$TMPDIR/fallback.stdout"
 grep -q -- "--runtime legacy" "$TMPDIR/session-distrobox.log"
 
+python3 "$ROOT/scripts/camoufox-session.py" \
+  --profile smoke \
+  --status \
+  --runtime auto \
+  "https://example.com" >"$TMPDIR/fallback-explicit-runtime.stdout"
+
+grep -q "FAKE DISTROBOX EXEC session fallback" "$TMPDIR/fallback-explicit-runtime.stdout"
+grep -q -- "--runtime legacy --profile smoke --status https://example.com" "$TMPDIR/session-distrobox.log"
+if grep -q -- "--runtime auto" "$TMPDIR/session-distrobox.log"; then
+  echo "unexpected runtime auto flag leaked into distrobox fallback" >&2
+  exit 1
+fi
+
 echo "camoufox-session adapter checks passed"

@@ -149,7 +149,26 @@ def require_ok(payload: dict, default: str) -> dict:
     raise BrowserRuntimeError(payload_error_message(payload, default))
 
 
+def _strip_runtime_args(argv: Sequence[str]) -> list[str]:
+    sanitized: list[str] = []
+    skip_next = False
+
+    for arg in argv:
+        if skip_next:
+            skip_next = False
+            continue
+        if arg == "--runtime":
+            skip_next = True
+            continue
+        if arg.startswith("--runtime="):
+            continue
+        sanitized.append(arg)
+
+    return sanitized
+
+
 def run_distrobox_fallback(script_path: Path, argv: Sequence[str], runtime: BrowserRuntime) -> int:
+    sanitized_argv = _strip_runtime_args(argv)
     command = [
         runtime.binary,
         "enter",
@@ -159,7 +178,7 @@ def run_distrobox_fallback(script_path: Path, argv: Sequence[str], runtime: Brow
         str(script_path),
         "--runtime",
         "legacy",
-        *argv,
+        *sanitized_argv,
     ]
     try:
         result = subprocess.run(command, check=False)
