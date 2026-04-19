@@ -7,23 +7,30 @@ Usage:
       [--import-cookies FILE] [--export-cookies FILE] URL
 """
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import json
 import os
 import re
 import sys
+import tempfile
+import time
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
 from urllib.parse import urlparse
 
-try:
-    from camoufox.async_api import AsyncCamoufox
-except ImportError:
-    print("Error: camoufox not installed. Run:")
-    print("  pip install camoufox")
-    print("  python -c 'import camoufox; camoufox.install()'")
-    sys.exit(1)
+from runtime_support import (
+    BrowserRuntime,
+    BrowserRuntimeError,
+    detect_browser_runtime,
+    find_distrobox_runtime,
+    payload_error_message,
+    require_ok,
+    run_camoufox_nixos,
+    run_distrobox_fallback,
+)
 
 
 PROFILE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$")
@@ -67,28 +74,14 @@ def chmod_file(path: Path) -> None:
 
 
 def domain_matches(cookie_domain: str, host: str) -> bool:
-    """Check if cookie domain matches host.
-    
-    Per RFC 6265, the leading dot is ignored for matching purposes.
-    We match if host equals the domain or is a subdomain of it.
-    This is intentionally permissive to handle various cookie export formats.
-    """
     if not cookie_domain or not host:
         return False
-    
-    # Normalize to lowercase for case-insensitive comparison
+
     cookie_domain = cookie_domain.lower().lstrip(".")
     host = host.lower()
-    
-    # Exact match
     if host == cookie_domain:
         return True
-    
-    # Subdomain match (host ends with .domain)
-    if host.endswith("." + cookie_domain):
-        return True
-    
-    return False
+    return host.endswith("." + cookie_domain)
 
 
 def filter_cookies_for_host(cookies: Iterable[dict], host: str) -> List[dict]:
@@ -166,6 +159,154 @@ async def wait_for_enter(prompt: str) -> None:
     await asyncio.get_running_loop().run_in_executor(None, lambda: input(prompt))
 
 
+def print_runtime_error(message: str) -> int:
+    print(f"Error: {message}", file=sys.stderr)
+    return 1
+
+
+def filter_storage_state_for_host(path: Path, host: str) -> List[dict]:
+    with path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    cookies = payload.get("cookies", [])
+    if not isinstance(cookies, list):
+        return []
+    return filter_cookies_for_host(cookies, host)
+
+
+def detect_login_wall_host_native(page: dict, content: str, has_password_field: bool) -> Tuple[bool, List[str]]:
+    signals = login_wall_signals(page.get("url", ""), page.get("title", ""), content)
+    if has_password_field:
+        signals.append("password-form")
+    return bool(signals), signals
+
+
+def load_page_state_host_native(
+    runtime: BrowserRuntime,
+    session_id: str,
+) -> Tuple[dict, str, bool]:
+    html_payload = run_camoufox_nixos(
+        runtime,
+        ["eval", "--session", session_id, "document.documentElement.outerHTML"],
+    )
+    require_ok(html_payload, "Failed to read page HTML.")
+    content = html_payload.get("data", {}).get("result", "")
+    if not isinstance(content, str):
+        content = json.dumps(content)
+
+    password_payload = run_camoufox_nixos(
+        runtime,
+        [
+            "eval",
+            "--session",
+            session_id,
+            "Boolean(document.querySelector(\"input[type='password'], input[name='password'], input[autocomplete='current-password']\"))",
+        ],
+    )
+    require_ok(password_payload, "Failed to inspect page login state.")
+    has_password_field = bool(password_payload.get("data", {}).get("result"))
+    return html_payload.get("page") or {}, content, has_password_field
+
+
+def export_cookies_host_native(
+    runtime: BrowserRuntime,
+    session_id: str,
+    host: str,
+    export_path: Path,
+) -> None:
+    with tempfile.NamedTemporaryFile(prefix="camoufox-storage-", suffix=".json", delete=False) as handle:
+        storage_path = Path(handle.name)
+    try:
+        storage_payload = run_camoufox_nixos(
+            runtime,
+            ["storage-state", "--session", session_id, str(storage_path)],
+        )
+        require_ok(storage_payload, "Failed to export storage state.")
+        matched = filter_storage_state_for_host(storage_path, host)
+        save_cookies(export_path, matched)
+        print(f"🍪 Exported {len(matched)} cookies to: {export_path}")
+    finally:
+        storage_path.unlink(missing_ok=True)
+
+
+def run_session_host_native(
+    runtime: BrowserRuntime,
+    url: str,
+    profile_name: str,
+    login_mode: bool,
+    headless: bool,
+    export_cookies: Optional[Path],
+    import_cookies: Optional[Path],
+    status_only: bool,
+) -> int:
+    if import_cookies:
+        fallback = find_distrobox_runtime()
+        if fallback is not None:
+            return run_distrobox_fallback(Path(__file__).resolve(), sys.argv[1:], fallback)
+        print("Error: --import-cookies requires the legacy distrobox fallback.", file=sys.stderr)
+        return 2
+
+    host = extract_host(url)
+    if not host:
+        print("Error: Invalid URL (missing host)")
+        return 2
+
+    print("🥷 Starting Camoufox persistent session (NixOS-native runtime)...")
+
+    open_args = ["open", "--profile", profile_name]
+    if headless or status_only or not login_mode:
+        open_args.append("--headless")
+    open_args.append(url)
+
+    open_payload = run_camoufox_nixos(runtime, open_args)
+    require_ok(open_payload, "Failed to open session.")
+    session_id = open_payload.get("sessionId")
+    if not isinstance(session_id, str) or not session_id:
+        raise BrowserRuntimeError("camoufox-nixos did not return a session id.")
+
+    try:
+        print(f"📡 Navigating to: {url}")
+        time.sleep(2)
+
+        page, content, has_password_field = load_page_state_host_native(runtime, session_id)
+        login_wall, signals = detect_login_wall_host_native(page, content, has_password_field)
+        if login_wall:
+            print(f"🔒 Login wall signals: {', '.join(signals)}")
+        else:
+            print("✅ No obvious login wall detected")
+
+        if status_only:
+            with tempfile.NamedTemporaryFile(prefix="camoufox-status-", suffix=".json", delete=False) as handle:
+                storage_path = Path(handle.name)
+            try:
+                storage_payload = run_camoufox_nixos(
+                    runtime,
+                    ["storage-state", "--session", session_id, str(storage_path)],
+                )
+                require_ok(storage_payload, "Failed to inspect stored cookies.")
+                matched = filter_storage_state_for_host(storage_path, host)
+            finally:
+                storage_path.unlink(missing_ok=True)
+            print(f"📦 Profile: {profile_name}")
+            print(f"   Stored cookies for {host}: {len(matched)}")
+            return 0
+
+        if login_mode:
+            print("🧭 Login mode enabled (headed).")
+            if login_wall:
+                print("   Complete login in the open browser window.")
+            asyncio.run(wait_for_enter("Press Enter to save session and exit... "))
+
+        if export_cookies:
+            export_cookies_host_native(runtime, session_id, host, export_cookies)
+
+        return 0
+    finally:
+        close_payload = run_camoufox_nixos(runtime, ["close", "--session", session_id])
+        if close_payload.get("ok") is not True:
+            message = payload_error_message(close_payload, "Failed to close session.")
+            print(f"Warning: {message}", file=sys.stderr)
+
+
 async def run_session(
     url: str,
     profile_name: str,
@@ -175,6 +316,8 @@ async def run_session(
     import_cookies: Optional[Path],
     status_only: bool,
 ) -> int:
+    from camoufox.async_api import AsyncCamoufox
+
     profile_dir = ensure_profile_dir(profile_name)
     host = extract_host(url)
     if not host:
@@ -239,7 +382,7 @@ async def run_session(
     return 0
 
 
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser(
         description="Camoufox persistent session manager (profile-based)"
     )
@@ -273,12 +416,18 @@ def main() -> None:
         action="store_true",
         help="Show session status for URL",
     )
+    parser.add_argument(
+        "--runtime",
+        choices=("auto", "legacy"),
+        default="auto",
+        help=argparse.SUPPRESS,
+    )
 
     args = parser.parse_args()
 
     if args.login and args.headless:
         print("Error: --login and --headless are mutually exclusive")
-        sys.exit(2)
+        return 2
 
     export_path = Path(args.export_cookies).expanduser() if args.export_cookies else None
     import_path = Path(args.import_cookies).expanduser() if args.import_cookies else None
@@ -287,8 +436,30 @@ def main() -> None:
     if args.login:
         headless = False
 
-    exit_code = asyncio.run(
-        run_session(
+    try:
+        if args.runtime == "legacy":
+            return asyncio.run(
+                run_session(
+                    url=args.url,
+                    profile_name=args.profile,
+                    login_mode=args.login,
+                    headless=headless,
+                    export_cookies=export_path,
+                    import_cookies=import_path,
+                    status_only=args.status,
+                )
+            )
+
+        selection = detect_browser_runtime()
+        runtime = selection.runtime
+        if runtime is None:
+            return print_runtime_error(selection.error_message or "No supported browser runtime found.")
+
+        if runtime.kind == "distrobox":
+            return run_distrobox_fallback(Path(__file__).resolve(), sys.argv[1:], runtime)
+
+        return run_session_host_native(
+            runtime=runtime,
             url=args.url,
             profile_name=args.profile,
             login_mode=args.login,
@@ -297,9 +468,11 @@ def main() -> None:
             import_cookies=import_path,
             status_only=args.status,
         )
-    )
-    sys.exit(exit_code)
+    except ImportError:
+        return print_runtime_error("camoufox not installed in the selected legacy runtime.")
+    except BrowserRuntimeError as exc:
+        return print_runtime_error(str(exc))
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

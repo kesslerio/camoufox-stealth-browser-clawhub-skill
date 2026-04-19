@@ -1,39 +1,66 @@
-#!/bin/bash
-# Setup stealth browser tools in pybox
-# Usage: bash scripts/setup.sh
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e
+echo "🥷 Checking stealth browser runtimes..."
+echo ""
 
-echo "🥷 Setting up stealth browser tools in pybox..."
+have_host_native=0
+have_distrobox=0
 
-# Check if distrobox is available
-if ! command -v distrobox &> /dev/null; then
-    echo "❌ Error: distrobox not found. Install it first."
-    exit 1
+if command -v camoufox-nixos >/dev/null 2>&1; then
+  have_host_native=1
+  echo "✅ Browser lane ready: camoufox-nixos detected"
+else
+  echo "ℹ️  camoufox-nixos not found"
 fi
 
-# Check if pybox exists
-if ! distrobox list | grep -q "pybox"; then
-    echo "❌ Error: pybox container not found."
+if command -v distrobox >/dev/null 2>&1; then
+  if distrobox list | grep -q "pybox"; then
+    have_distrobox=1
+    echo "✅ Legacy fallback available: distrobox + pybox detected"
+    echo "📦 Installing fallback/API packages in pybox..."
+    distrobox enter pybox -- python3.14 -m pip install --upgrade pip
+    distrobox enter pybox -- python3.14 -m pip install camoufox curl_cffi
+    echo "🦊 Installing Camoufox browser in pybox..."
+    distrobox enter pybox -- python3.14 -c "import camoufox; camoufox.install()"
+    echo "🔧 Installing optional headed-browser deps in pybox..."
+    distrobox enter pybox -- sudo dnf install -y gtk3 libXt nss at-spi2-atk cups-libs libdrm mesa-libgbm 2>/dev/null || true
+  else
+    echo "ℹ️  distrobox is installed but pybox is missing"
     echo "   Create it with: distrobox create --name pybox --image fedora:latest"
-    exit 1
+  fi
+else
+  echo "ℹ️  distrobox not found"
 fi
 
-echo "📦 Installing Python packages..."
-distrobox-enter pybox -- pip install --upgrade pip
-distrobox-enter pybox -- pip install camoufox curl_cffi
+echo ""
 
-echo "🦊 Installing Camoufox browser..."
-distrobox-enter pybox -- python -c "import camoufox; camoufox.install()"
+if [[ "$have_host_native" -eq 0 && "$have_distrobox" -eq 0 ]]; then
+  echo "❌ No supported runtime is ready."
+  echo "   Browser default: install camoufox-nixos"
+  echo "   Fallback/API lane: install distrobox and create pybox, then rerun this script"
+  exit 1
+fi
 
-echo "🔧 Installing system dependencies for headed mode..."
-distrobox-enter pybox -- sudo dnf install -y gtk3 libXt nss at-spi2-atk cups-libs libdrm mesa-libgbm 2>/dev/null || true
+echo "Runtime summary:"
+if [[ "$have_host_native" -eq 1 ]]; then
+  echo "  - Browser default: camoufox-nixos"
+fi
+if [[ "$have_distrobox" -eq 1 ]]; then
+  echo "  - Browser fallback: distrobox + pybox"
+  echo "  - API lane: curl_cffi in distrobox + pybox"
+fi
 
 echo ""
-echo "✅ Setup complete!"
+echo "Try browser fetch with:"
+echo "  python scripts/camoufox-fetch.py https://example.com --headless"
 echo ""
-echo "Test with:"
-echo "  distrobox-enter pybox -- python scripts/nodriver-fetch.py https://bot.sannysoft.com --screenshot test.png"
+echo "Try session status with:"
+echo "  python scripts/camoufox-session.py --profile demo --status https://example.com"
 echo ""
-echo "Or for maximum stealth:"
-echo "  distrobox-enter pybox -- python scripts/camoufox-fetch.py https://nowsecure.nl --screenshot test.png"
+if [[ "$have_distrobox" -eq 1 ]]; then
+  echo "Try the API lane with:"
+  echo "  distrobox enter pybox -- python3.14 scripts/curl-api.py https://api.example.com"
+  echo ""
+fi
+echo "✅ Setup guidance complete"

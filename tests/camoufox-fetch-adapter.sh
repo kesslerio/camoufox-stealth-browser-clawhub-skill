@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+FIXTURES="$ROOT/tests/fixtures"
+TMPDIR="$(mktemp -d)"
+trap 'rm -rf "$TMPDIR"' EXIT
+
+export STEALTH_BROWSER_CAMOUFOX_NIXOS_BIN="$FIXTURES/fake_camoufox_nixos.py"
+export STEALTH_BROWSER_DISTROBOX_BIN=none
+
+HTML_OUT="$TMPDIR/page.html"
+SHOT_OUT="$TMPDIR/page.png"
+STDOUT_OUT="$TMPDIR/fetch.stdout"
+
+python3 "$ROOT/scripts/camoufox-fetch.py" \
+  "https://example.com" \
+  --wait 0 \
+  --output "$HTML_OUT" \
+  --screenshot "$SHOT_OUT" \
+  --headless >"$STDOUT_OUT"
+
+grep -q "NixOS-native runtime" "$STDOUT_OUT"
+grep -q "HTML saved" "$STDOUT_OUT"
+grep -q "Example Domain" "$HTML_OUT"
+test -s "$SHOT_OUT"
+
+export STEALTH_BROWSER_CAMOUFOX_NIXOS_BIN=none
+export STEALTH_BROWSER_DISTROBOX_BIN="$FIXTURES/fake_distrobox.sh"
+export FAKE_DISTROBOX_EXEC_TEXT="fetch fallback"
+export FAKE_DISTROBOX_LOG="$TMPDIR/distrobox.log"
+
+python3 "$ROOT/scripts/camoufox-fetch.py" "https://example.com" --wait 0 >"$TMPDIR/fallback.stdout"
+
+grep -q "FAKE DISTROBOX EXEC fetch fallback" "$TMPDIR/fallback.stdout"
+grep -q -- "--runtime legacy" "$TMPDIR/distrobox.log"
+
+echo "camoufox-fetch adapter checks passed"

@@ -1,72 +1,63 @@
 # Camoufox Stealth Browser 🦊
 
-**C++ level** anti-bot evasion — not JavaScript band-aids.
+Camoufox is the stealth-browser skill for sites that block standard automation.
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+## What Changed
 
-## Why Camoufox > Chrome-Based Tools
+Browser workflows are now:
 
-| Approach | Patches At | Detectable? |
-|----------|-----------|-------------|
-| **Camoufox** ✅ | C++ (compiled into browser) | No — fingerprints are genuinely different |
-| undetected-chromedriver | JS runtime | Yes — timing analysis reveals patches |
-| puppeteer-stealth | JS injection | Yes — applied after page load |
-| playwright-stealth | JS injection | Yes — same limitations |
+1. `camoufox-nixos` first on NixOS hosts that have it
+2. `distrobox` + `pybox` fallback on compatible Linux setups
 
-Most "stealth" tools patch Chrome with JavaScript after the browser starts. Anti-bot systems detect this via timing analysis and consistency checks.
+`curl_cffi` remains the separate API-only lane and still uses the legacy distrobox setup in this repo.
 
-**Camoufox is different.** It's a Firefox fork with stealth patches compiled into the C++ source code. WebGL, Canvas, and AudioContext fingerprints are genuinely spoofed — not masked by JS overrides.
-
-## Key Features
-
-- 🦊 **C++ Level Stealth** — Fingerprints baked into the browser binary
-- 📦 **Container Isolation** — Runs in distrobox, keeps host clean
-- ⚡ **Dual-Tool Design** — Camoufox for browsers, curl_cffi for fast API-only scraping
-- 🔥 **Firefox-Based** — Less fingerprinted than Chrome (bots love Chrome)
-
-## Quick Start
+## Browser Quick Start
 
 ```bash
-# Setup (first time)
-distrobox-enter pybox -- python3.14 -m pip install camoufox curl_cffi
+python scripts/camoufox-fetch.py "https://example.com" --headless
 
-# Fetch a Cloudflare-protected page
-distrobox-enter pybox -- python3.14 scripts/camoufox-fetch.py \
-  "https://yelp.com/biz/example" --headless
-
-# API scraping (no browser needed)
-distrobox-enter pybox -- python3.14 scripts/curl-api.py \
-  "https://api.example.com" --impersonate chrome120
+python scripts/camoufox-session.py \
+  --profile example \
+  --status "https://example.com"
 ```
 
-## Requirements
+The browser scripts self-detect runtime. You do not need to decide between host-native and fallback manually.
 
-- `distrobox` with a `pybox` container
-- Residential proxy for Airbnb/Yelp (datacenter IPs = instant block)
+## Setup
 
-## Tools
+If `camoufox-nixos` is already installed, the browser lane is ready.
 
-| Tool | Use Case | Speed |
-|------|----------|-------|
-| **Camoufox** | Full browser automation, JS-heavy sites | ~3-5s/page |
-| **curl_cffi** | API endpoints, no JS needed | ~100ms/request |
+If it is missing, or if you also want the `curl_cffi` lane, run:
 
-## Documentation
+```bash
+bash scripts/setup.sh
+```
 
-- [SKILL.md](SKILL.md) — Full usage guide with session management
-- [references/proxy-setup.md](references/proxy-setup.md) — Proxy configuration
-- [references/fingerprint-checks.md](references/fingerprint-checks.md) — What anti-bot systems check
+That script configures the distrobox fallback when possible and tells you what is missing when it cannot.
 
-## Comparison with Other Skills
+## Runtime Matrix
 
-This skill focuses on **doing one thing well**: C++ level stealth with Camoufox.
+| Use case | Preferred lane | Fallback |
+|----------|----------------|----------|
+| Browser automation on NixOS host | `camoufox-nixos` | `distrobox` + `pybox` |
+| Browser automation on other compatible Linux hosts | `distrobox` + `pybox` | none in this repo |
+| API-only scraping | `curl_cffi` in distrobox | none in this repo |
 
-For CAPTCHA solving, task checkpointing, and proxy rotation, see the [GitHub issues](https://github.com/kesslerio/stealth-browser-clawhub-skill/issues) for planned features.
+## State
 
-## License
+Browser state depends on runtime:
 
-Apache 2.0 — See [LICENSE](LICENSE)
+- `camoufox-nixos`: `~/.cache/camoufox-nixos`
+- legacy distrobox lane: `~/.stealth-browser/profiles/<name>/`
 
----
+## Notes
 
-Made with 🦊 by [Kessler.io](https://kessler.io)
+- `--export-cookies` still works.
+- `--import-cookies` is a legacy fallback feature.
+- This repo does not try to make `camoufox-nixos` a generic cross-platform install target.
+
+## Docs
+
+- [SKILL.md](SKILL.md) — full usage guide
+- [references/proxy-setup.md](references/proxy-setup.md) — proxy guidance
+- [references/fingerprint-checks.md](references/fingerprint-checks.md) — anti-bot fingerprint categories
