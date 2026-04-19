@@ -1,0 +1,6 @@
+# expectation|scope|label|comma-separated terms
+positive|description|hostile-site browser automation|browser automation,block
+positive|description|stealth lane emphasis|camoufox,stealth
+positive|description|login and session reuse|login,session
+negative|description|api lane should not dominate|curl_cffi
+negative|description|api scraping should not route the skill|api scraping

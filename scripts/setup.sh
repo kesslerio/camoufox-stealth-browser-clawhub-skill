@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "🥷 Checking stealth browser runtimes..."
+echo "🥷 Checking stealth browser skill runtimes..."
 echo ""
 
 have_host_native=0
@@ -9,7 +9,7 @@ have_distrobox=0
 
 if command -v camoufox-nixos >/dev/null 2>&1; then
   have_host_native=1
-  echo "✅ Browser lane ready: camoufox-nixos detected"
+  echo "✅ Primary browser lane ready: camoufox-nixos detected"
 else
   echo "ℹ️  camoufox-nixos not found"
 fi
@@ -17,8 +17,8 @@ fi
 if command -v distrobox >/dev/null 2>&1; then
   if distrobox list | grep -q "pybox"; then
     have_distrobox=1
-    echo "✅ Legacy fallback available: distrobox + pybox detected"
-    echo "📦 Installing fallback/API packages in pybox..."
+    echo "✅ Browser fallback available: distrobox + pybox detected"
+    echo "📦 Installing fallback browser lane and optional API helper packages in pybox..."
     distrobox enter pybox -- python3.14 -m pip install --upgrade pip
     distrobox enter pybox -- python3.14 -m pip install camoufox curl_cffi
     echo "🦊 Installing Camoufox browser in pybox..."
@@ -38,17 +38,17 @@ echo ""
 if [[ "$have_host_native" -eq 0 && "$have_distrobox" -eq 0 ]]; then
   echo "❌ No supported runtime is ready."
   echo "   Browser default: install camoufox-nixos"
-  echo "   Fallback/API lane: install distrobox and create pybox, then rerun this script"
+  echo "   Browser fallback and optional API helper lane: install distrobox and create pybox, then rerun this script"
   exit 1
 fi
 
 echo "Runtime summary:"
 if [[ "$have_host_native" -eq 1 ]]; then
-  echo "  - Browser default: camoufox-nixos"
+  echo "  - Primary browser lane: camoufox-nixos"
 fi
 if [[ "$have_distrobox" -eq 1 ]]; then
   echo "  - Browser fallback: distrobox + pybox"
-  echo "  - API lane: curl_cffi in distrobox + pybox"
+  echo "  - Optional API helper lane: curl_cffi in distrobox + pybox"
 fi
 
 echo ""
@@ -59,7 +59,7 @@ echo "Try session status with:"
 echo "  python scripts/camoufox-session.py --profile demo --status https://example.com"
 echo ""
 if [[ "$have_distrobox" -eq 1 ]]; then
-  echo "Try the API lane with:"
+  echo "Try the optional API helper lane with:"
   echo "  distrobox enter pybox -- python3.14 scripts/curl-api.py https://api.example.com"
   echo ""
 fi
