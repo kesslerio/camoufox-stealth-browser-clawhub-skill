@@ -40,12 +40,23 @@ The repo still carries a separate `curl_cffi` helper, but it is not the primary 
 The browser scripts self-detect runtime. Use them directly:
 
 ```bash
-python scripts/camoufox-fetch.py "https://example.com" --headless
+./scripts/camoufox-fetch.py "https://example.com" --headless
 
-python scripts/camoufox-session.py \
+./scripts/camoufox-session.py \
   --profile economist \
   --status "https://www.economist.com"
 ```
+
+Do not frame browser execution as "importing Camoufox into system Python" or "switching to the proper runtime." Run the wrapper scripts directly and let them choose the runtime.
+
+## Runtime Failure Reporting
+
+When browser execution fails, report the observed runtime failure first.
+
+- If `camoufox-nixos` times out or exits before navigation, say it failed before page navigation and treat it as a host runtime launch issue until proven otherwise.
+- Do not turn a wrapper startup failure into a target-site blocking diagnosis.
+- Do not claim a "legacy Python path worked" unless you actually ran that exact path and verified success.
+- If you suggest the distrobox fallback, present it as an alternate documented browser lane, not proof that system Python imports are the real problem.
 
 ### Optional fallback/API setup
 
@@ -72,7 +83,7 @@ Do **not** use this skill for ordinary browsing or generic site testing. Use you
 ### Protected-page fetch
 
 ```bash
-python scripts/camoufox-fetch.py \
+./scripts/camoufox-fetch.py \
   "https://www.yelp.com/biz/example" \
   --headless \
   --wait 8 \
@@ -84,17 +95,17 @@ python scripts/camoufox-fetch.py \
 
 ```bash
 # Interactive login
-python scripts/camoufox-session.py \
+./scripts/camoufox-session.py \
   --profile airbnb \
   --login "https://www.airbnb.com/account-settings"
 
 # Reuse saved session
-python scripts/camoufox-session.py \
+./scripts/camoufox-session.py \
   --profile airbnb \
   --headless "https://www.airbnb.com/trips"
 
 # Check session status
-python scripts/camoufox-session.py \
+./scripts/camoufox-session.py \
   --profile airbnb \
   --status "https://www.airbnb.com"
 ```
@@ -114,7 +125,7 @@ Implications:
 
 ## Gotchas
 
-See [references/gotchas.md](references/gotchas.md) for the non-obvious footguns: browser lane vs API helper confusion, headed-login expectations, Linux-only fallback assumptions, and host-native state-path differences.
+See [references/gotchas.md](references/gotchas.md) for the non-obvious footguns: runtime-framing mistakes, browser lane vs API helper confusion, headed-login expectations, Linux-only fallback assumptions, and host-native state-path differences.
 
 ## Secondary API Helper
 
@@ -161,6 +172,7 @@ Interactive login still needs a visible browser window regardless of runtime. If
 | Problem | Meaning | What to do |
 |---------|---------|------------|
 | `No supported browser runtime found` | Neither `camoufox-nixos` nor valid distrobox fallback was detected | Install the host wrapper or configure distrobox plus pybox |
+| `camoufox-nixos` times out before navigation | Browser wrapper failed to launch cleanly on the host | Report it as a host runtime launch issue first; only discuss site blocking after the browser actually reaches the target |
 | `--import-cookies requires the legacy distrobox fallback` | Host-native lane cannot honestly reproduce that legacy import flow | Use the fallback lane for that operation |
 | Browser lane works but `curl-api.py` does not | `curl_cffi` lane is still legacy-path setup in this repo | Run `bash scripts/setup.sh` |
 | Immediate block or challenge loop | Proxy quality or behavior issue | Use residential/mobile proxy and increase wait time |
