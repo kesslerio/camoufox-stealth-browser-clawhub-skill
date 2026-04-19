@@ -68,6 +68,12 @@ bash scripts/setup.sh
 
 That script configures the distrobox fallback when `pybox` is available and tells you what is missing when it is not.
 
+If you just patched the host-local NixOS wrapper itself, remember that the live `camoufox-nixos` command does not change until the host runs:
+
+```bash
+sudo nixos-rebuild switch --flake /etc/nixos#nixos
+```
+
 ## When To Use
 
 - Standard Playwright or Selenium gets blocked
@@ -167,11 +173,14 @@ Interactive login still needs a visible browser window regardless of runtime. If
 - SSH with display forwarding where supported
 - VNC or similar remote desktop
 
+On TTY-only or headless shell sessions, headed `camoufox-nixos open` should fail fast with `display_missing`. That is expected. Use `--headless` unless you intentionally attached a real display.
+
 ## Troubleshooting
 
 | Problem | Meaning | What to do |
 |---------|---------|------------|
 | `No supported browser runtime found` | Neither `camoufox-nixos` nor valid distrobox fallback was detected | Install the host wrapper or configure distrobox plus pybox |
+| `display_missing` | You tried a headed host-native launch on a session with no `DISPLAY` or `WAYLAND_DISPLAY` | This is expected on TTY-only hosts and remote shells; rerun with `--headless` or use a real graphical session |
 | `camoufox-nixos` times out before navigation | Browser wrapper failed to launch cleanly on the host | Report it as a host runtime launch issue first; only discuss site blocking after the browser actually reaches the target |
 | `--import-cookies requires the legacy distrobox fallback` | Host-native lane cannot honestly reproduce that legacy import flow | Use the fallback lane for that operation |
 | Browser lane works but `curl-api.py` does not | `curl_cffi` lane is still legacy-path setup in this repo | Run `bash scripts/setup.sh` |

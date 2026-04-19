@@ -27,6 +27,12 @@ The browser scripts self-detect runtime. You do not need to decide between host-
 
 If `camoufox-nixos` is already installed, the browser lane is ready.
 
+If you patched the underlying NixOS wrapper, the live `camoufox-nixos` command does not update until you rebuild the host system:
+
+```bash
+sudo nixos-rebuild switch --flake /etc/nixos#nixos
+```
+
 If it is missing, or if you also want the optional API helper lane, run:
 
 ```bash
@@ -53,6 +59,8 @@ This skill owns no durable state. Browser state depends on the selected runtime:
 ## Gotchas
 
 Read [references/gotchas.md](references/gotchas.md) before assuming parity between the host-native browser lane and the legacy distrobox lane.
+
+On TTY-only or headless shell sessions, a headed host-native launch should return `display_missing`. That is expected; use `--headless` unless a real display session is attached.
 
 ## Secondary API Helper
 

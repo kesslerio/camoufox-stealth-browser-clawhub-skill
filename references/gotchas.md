@@ -30,6 +30,12 @@ These are the recurring footguns for this repo. They matter more than generic ad
 - Interactive login still needs a visible browser window.
 - `--login` is for headed manual session establishment, not headless auth magic.
 - If you are remote, you still need a display-capable setup such as a local desktop session, forwarding that actually works, or VNC.
+- On TTY-only or headless shell sessions, a headed host-native launch should fail with `display_missing` instead of pretending the browser lane is broken.
+
+## NixOS Rebuilds
+
+- If you patch the host-local `camoufox-nixos` NixOS module, the live wrapper does not update until `sudo nixos-rebuild switch --flake /etc/nixos#nixos` completes.
+- Do not diagnose the old live wrapper before checking whether the rebuilt `/run/current-system/sw/bin/camoufox-nixos` actually points at the new store path.
 
 ## Fallback Assumptions
 
