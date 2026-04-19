@@ -3,7 +3,7 @@
 Camoufox persistent session manager.
 
 Usage:
-    python camoufox-session.py --profile NAME [--login|--headless] [--status]
+    ./scripts/camoufox-session.py --profile NAME [--login|--headless] [--status]
       [--import-cookies FILE] [--export-cookies FILE] URL
 """
 

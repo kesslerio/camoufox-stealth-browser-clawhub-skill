@@ -5,7 +5,7 @@ Maximum anti-bot evasion - C++ level Firefox patches.
 Best for: Yelp, Datadome, aggressive Cloudflare Turnstile.
 
 Usage:
-    python camoufox-fetch.py "https://example.com" [options]
+    ./scripts/camoufox-fetch.py "https://example.com" [options]
 
 Options:
     --wait N          Wait N seconds after page load (default: 8)
