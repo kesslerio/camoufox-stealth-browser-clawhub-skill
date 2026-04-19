@@ -14,14 +14,14 @@ This is the repo's primary promise. The `curl_cffi` helper still exists, but it 
 ## Browser Quick Start
 
 ```bash
-python scripts/camoufox-fetch.py "https://example.com" --headless
+./scripts/camoufox-fetch.py "https://example.com" --headless
 
-python scripts/camoufox-session.py \
+./scripts/camoufox-session.py \
   --profile example \
   --status "https://example.com"
 ```
 
-The browser scripts self-detect runtime. You do not need to decide between host-native and fallback manually.
+The browser scripts self-detect runtime. You do not need to decide between host-native and fallback manually, and you should not describe this as importing `camoufox` into system Python.
 
 ## Setup
 

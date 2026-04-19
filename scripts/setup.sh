@@ -53,10 +53,10 @@ fi
 
 echo ""
 echo "Try browser fetch with:"
-echo "  python scripts/camoufox-fetch.py https://example.com --headless"
+echo "  ./scripts/camoufox-fetch.py https://example.com --headless"
 echo ""
 echo "Try session status with:"
-echo "  python scripts/camoufox-session.py --profile demo --status https://example.com"
+echo "  ./scripts/camoufox-session.py --profile demo --status https://example.com"
 echo ""
 if [[ "$have_distrobox" -eq 1 ]]; then
   echo "Try the optional API helper lane with:"

@@ -2,6 +2,13 @@
 
 These are the recurring footguns for this repo. They matter more than generic advice.
 
+## Runtime Framing
+
+- Do not say the browser lane failed because system Python cannot import the `camoufox` module.
+- Do not narrate browser execution as "switching to the proper runtime."
+- Run `./scripts/camoufox-fetch.py` or `./scripts/camoufox-session.py` directly.
+- Those wrapper scripts detect `camoufox-nixos` first and fall back automatically when the legacy distrobox lane is valid.
+
 ## Browser Lane Vs API Helper
 
 - The primary skill contract is hostile-site browser automation.

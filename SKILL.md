@@ -40,12 +40,14 @@ The repo still carries a separate `curl_cffi` helper, but it is not the primary 
 The browser scripts self-detect runtime. Use them directly:
 
 ```bash
-python scripts/camoufox-fetch.py "https://example.com" --headless
+./scripts/camoufox-fetch.py "https://example.com" --headless
 
-python scripts/camoufox-session.py \
+./scripts/camoufox-session.py \
   --profile economist \
   --status "https://www.economist.com"
 ```
+
+Do not frame browser execution as "importing Camoufox into system Python" or "switching to the proper runtime." Run the wrapper scripts directly and let them choose the runtime.
 
 ### Optional fallback/API setup
 
@@ -72,7 +74,7 @@ Do **not** use this skill for ordinary browsing or generic site testing. Use you
 ### Protected-page fetch
 
 ```bash
-python scripts/camoufox-fetch.py \
+./scripts/camoufox-fetch.py \
   "https://www.yelp.com/biz/example" \
   --headless \
   --wait 8 \
@@ -84,17 +86,17 @@ python scripts/camoufox-fetch.py \
 
 ```bash
 # Interactive login
-python scripts/camoufox-session.py \
+./scripts/camoufox-session.py \
   --profile airbnb \
   --login "https://www.airbnb.com/account-settings"
 
 # Reuse saved session
-python scripts/camoufox-session.py \
+./scripts/camoufox-session.py \
   --profile airbnb \
   --headless "https://www.airbnb.com/trips"
 
 # Check session status
-python scripts/camoufox-session.py \
+./scripts/camoufox-session.py \
   --profile airbnb \
   --status "https://www.airbnb.com"
 ```
@@ -114,7 +116,7 @@ Implications:
 
 ## Gotchas
 
-See [references/gotchas.md](references/gotchas.md) for the non-obvious footguns: browser lane vs API helper confusion, headed-login expectations, Linux-only fallback assumptions, and host-native state-path differences.
+See [references/gotchas.md](references/gotchas.md) for the non-obvious footguns: runtime-framing mistakes, browser lane vs API helper confusion, headed-login expectations, Linux-only fallback assumptions, and host-native state-path differences.
 
 ## Secondary API Helper
 
