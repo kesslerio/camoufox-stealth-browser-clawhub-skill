@@ -1,15 +1,15 @@
 # Camoufox Stealth Browser 🦊
 
-Camoufox is the stealth-browser skill for sites that block standard automation.
+Camoufox is the browser-stealth skill for hostile sites that block standard automation.
 
-## What Changed
+## Primary Use
 
 Browser workflows are now:
 
 1. `camoufox-nixos` first on NixOS hosts that have it
 2. `distrobox` + `pybox` fallback on compatible Linux setups
 
-`curl_cffi` remains the separate API-only lane and still uses the legacy distrobox setup in this repo.
+This is the repo's primary promise. The `curl_cffi` helper still exists, but it is a secondary API-only lane rather than the main routing target.
 
 ## Browser Quick Start
 
@@ -27,7 +27,7 @@ The browser scripts self-detect runtime. You do not need to decide between host-
 
 If `camoufox-nixos` is already installed, the browser lane is ready.
 
-If it is missing, or if you also want the `curl_cffi` lane, run:
+If it is missing, or if you also want the optional API helper lane, run:
 
 ```bash
 bash scripts/setup.sh
@@ -43,21 +43,44 @@ That script configures the distrobox fallback when possible and tells you what i
 | Browser automation on other compatible Linux hosts | `distrobox` + `pybox` | none in this repo |
 | API-only scraping | `curl_cffi` in distrobox | none in this repo |
 
-## State
+## State Ownership
 
-Browser state depends on runtime:
+This skill owns no durable state. Browser state depends on the selected runtime:
 
 - `camoufox-nixos`: `~/.cache/camoufox-nixos`
 - legacy distrobox lane: `~/.stealth-browser/profiles/<name>/`
 
-## Notes
+## Gotchas
+
+Read [references/gotchas.md](references/gotchas.md) before assuming parity between the host-native browser lane and the legacy distrobox lane.
+
+## Secondary API Helper
 
 - `--export-cookies` still works.
 - `--import-cookies` is a legacy fallback feature.
+- `curl_cffi` stays available for API-only scraping, but it is not the main reason this skill exists.
 - This repo does not try to make `camoufox-nixos` a generic cross-platform install target.
+
+## Verification
+
+Skill/package checks:
+
+```bash
+bash scripts/lint-skill.sh
+bash scripts/test-discovery.sh
+```
+
+Browser adapter checks:
+
+```bash
+bash tests/runtime-selection.sh
+bash tests/camoufox-fetch-adapter.sh
+bash tests/camoufox-session-adapter.sh
+```
 
 ## Docs
 
 - [SKILL.md](SKILL.md) — full usage guide
+- [references/gotchas.md](references/gotchas.md) — recurring footguns and local assumptions
 - [references/proxy-setup.md](references/proxy-setup.md) — proxy guidance
 - [references/fingerprint-checks.md](references/fingerprint-checks.md) — anti-bot fingerprint categories

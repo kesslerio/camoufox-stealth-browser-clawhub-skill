@@ -1,7 +1,7 @@
 ---
 name: camoufox-stealth-browser
 homepage: https://github.com/kesslerio/camoufox-stealth-browser-clawhub-skill
-description: C++ level anti-bot browser automation using Camoufox (patched Firefox). Browser workflows prefer camoufox-nixos on NixOS hosts and fall back to distrobox plus pybox on compatible Linux setups. Use when standard Playwright or Selenium gets blocked by Cloudflare, Datadome, Airbnb, Yelp, or similar anti-bot systems. NOT for normal browser automation.
+description: Stealth browser automation with Camoufox for hostile sites that block standard Playwright or Selenium flows. Browser workflows prefer camoufox-nixos on NixOS hosts and fall back to distrobox plus pybox on compatible Linux setups. Use when Cloudflare, Datadome, Airbnb, Yelp, or similar anti-bot targets require persistent login and session reuse. Browser lane only; API helpers are secondary.
 metadata:
   openclaw:
     emoji: "🦊"
@@ -12,7 +12,7 @@ metadata:
 
 # Camoufox Stealth Browser 🦊
 
-Camoufox is the stealth lane for hostile sites. It patches Firefox at the browser level instead of bolting JavaScript tricks on top after launch.
+Camoufox is the hostile-site browser lane. Use it when standard Playwright or Selenium flows get blocked and you need a real stealth browser session rather than generic automation.
 
 ## Why Camoufox
 
@@ -31,7 +31,7 @@ The skill now uses this order for **browser** workflows:
 2. `distrobox` with `pybox`
 3. clear setup failure if neither exists
 
-`curl_cffi` is unchanged. It remains the API-only lane and still relies on the legacy distrobox setup in this repo.
+The repo still carries a separate `curl_cffi` helper, but it is not the primary routing target for this skill.
 
 ## Quick Start
 
@@ -47,7 +47,7 @@ python scripts/camoufox-session.py \
   --status "https://www.economist.com"
 ```
 
-### Legacy/API setup
+### Optional fallback/API setup
 
 If `camoufox-nixos` is missing, or if you need the `curl_cffi` lane, run:
 
@@ -63,6 +63,7 @@ That script configures the distrobox fallback when `pybox` is available and tell
 - The site shows Cloudflare challenge loops
 - You need persistent authenticated browsing for hostile or paywalled sites
 - You need actual stealth rather than generic browser automation
+- You need login/session reuse on a host that already has `camoufox-nixos`
 
 Do **not** use this skill for ordinary browsing or generic site testing. Use your normal browser automation tool for that.
 
@@ -98,28 +99,32 @@ python scripts/camoufox-session.py \
   --status "https://www.airbnb.com"
 ```
 
-## State Model
+## State Ownership
 
-Browser profile state now depends on the selected runtime:
+This skill owns **no durable state of its own**. Browser profile state belongs to the selected runtime:
 
 - **Host-native (`camoufox-nixos`)**: `~/.cache/camoufox-nixos`
 - **Legacy distrobox fallback**: `~/.stealth-browser/profiles/<name>/`
 
 Implications:
 
-- Persistent session reuse still works in both lanes.
+- Persistent session reuse still works in both lanes because the runtimes own their own profile/cache locations.
 - `--import-cookies` is a legacy fallback feature. If you ask for it without the distrobox lane, the script fails clearly instead of pretending parity.
 - `--export-cookies` continues to work.
 
-## `curl_cffi` Lane
+## Gotchas
 
-`curl_cffi` remains the API-only path. It is useful when:
+See [references/gotchas.md](references/gotchas.md) for the non-obvious footguns: browser lane vs API helper confusion, headed-login expectations, Linux-only fallback assumptions, and host-native state-path differences.
+
+## Secondary API Helper
+
+`curl_cffi` remains in this repo as a secondary API-only helper. It is useful when:
 
 - there is no browser interaction requirement
 - you already know the API endpoint
 - browser overhead would be wasted
 
-Current repo guidance for it is still the legacy distrobox path:
+It is not the primary skill contract. Current repo guidance for it is still the legacy distrobox path:
 
 ```bash
 distrobox enter pybox -- python3.14 scripts/curl-api.py "https://api.example.com"
@@ -131,7 +136,7 @@ distrobox enter pybox -- python3.14 scripts/curl-api.py "https://api.example.com
 - **Other Linux hosts**: use the distrobox fallback
 - **macOS / Windows**: `camoufox-nixos` is not the portability story; the repo’s portable browser guidance is still the distrobox fallback where available
 
-This skill does **not** try to teach every machine how to recreate `camoufox-nixos`. That wrapper is host-specific.
+This skill does **not** try to teach every machine how to recreate `camoufox-nixos`. That wrapper is host-specific, and the distrobox lane is the compatibility path where available.
 
 ## Proxy Reminder
 
@@ -163,5 +168,6 @@ Interactive login still needs a visible browser window regardless of runtime. If
 ## References
 
 - [README.md](README.md) — repo overview
+- [references/gotchas.md](references/gotchas.md) — recurring footguns and local assumptions
 - [references/proxy-setup.md](references/proxy-setup.md) — proxy guidance
 - [references/fingerprint-checks.md](references/fingerprint-checks.md) — anti-bot fingerprint categories
